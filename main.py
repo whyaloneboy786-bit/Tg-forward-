@@ -3,42 +3,50 @@ import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
-# Logs enable karein taake Railway dashboard mein sab dikhe
+# Railway logs mein error dekhne ke liye
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 Bot Active! Mujhe group/channel mein Admin banayein.")
+    # Command check for both message and channel_post
+    msg = update.message or update.channel_post
+    if msg:
+        await msg.reply_text("🤖 Bot Active! I will remove forward tags from Groups and Channels.")
 
 async def remove_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = update.effective_message
+    # Sabse zaroori line: Channel posts ko pakadne ke liye
+    msg = update.channel_post or update.message
     
-    # Check karein ke message forwarded hai ya nahi
-    if msg.forward_date or msg.forward_from or msg.forward_from_chat:
+    if not msg:
+        return
+
+    # Check if forwarded
+    if msg.forward_date or msg.forward_from_chat or msg.forward_from:
         try:
-            # Pehle message copy karein (bina tag ke)
+            # Copy message without tag
             await context.bot.copy_message(
                 chat_id=msg.chat_id,
                 from_chat_id=msg.chat_id,
                 message_id=msg.message_id
             )
-            # Purana forwarded message delete kar dein
+            # Delete original forwarded message
             await msg.delete()
-            logging.info(f"Forward tag removed in {msg.chat_id}")
         except Exception as e:
             logging.error(f"Error: {e}")
 
 if __name__ == "__main__":
     if not BOT_TOKEN:
-        print("❌ BOT_TOKEN missing!")
+        print("❌ BOT_TOKEN missing in Railway Variables!")
     else:
+        # allowed_updates=[update.ALL_TYPES] channels ke liye lazmi hai
         app = ApplicationBuilder().token(BOT_TOKEN).build()
         
         app.add_handler(CommandHandler("start", start))
         
-        # Ye filter sirf forwarded messages ko pakre ga
-        app.add_handler(MessageHandler(filters.FORWARDED & ~filters.COMMAND, remove_forward))
+        # filters.ALL use kar rahe hain taake koi bhi forward miss na ho
+        app.add_handler(MessageHandler(filters.FORWARDED, remove_forward))
 
-        print("🚀 Bot is running...")
-        app.run_polling()
+        print("🚀 Bot is starting...")
+        # Railway ke liye updates enable karein
+        app.run_polling(allowed_updates=Update.ALL_TYPES)
