@@ -1,3 +1,7 @@
+from keep_alive import keep_alive
+
+keep_alive()  # Starts the Flask server
+
 import os
 from telegram import Update
 from telegram.ext import (
