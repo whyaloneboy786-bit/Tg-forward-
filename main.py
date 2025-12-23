@@ -12,9 +12,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == "private":
         await update.message.reply_text(
             "🤖 Forward Tag Remover Bot\n\n"
-            "Add me as admin in groups/channels to remove tags."
-        )
 
+        "👨‍💻 Developer: Dead person"
+
+        "📢 Support Channel: @moviesupdatehub\n\n"
+
+        "Add me as admin in groups/channels.\n"
 async def remove_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not msg or not msg.forward_date: # Sirf forwarded messages ko touch karega
