@@ -3,47 +3,50 @@ import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
-# Logging taake Railway logs mein clear nazar aaye kya ho raha hai
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = update.effective_message
-    await msg.reply_text("🚀 Bot Active! Channels aur Groups mein admin banayein.")
+    if update.effective_chat.type == "private":
+        await update.message.reply_text(
+            "🤖 Forward Tag Remover Bot\n\n"
+            "➕ Mujhe channel ya group ka ADMIN banao\n"
+            "🧹 Main forwarded posts ka tag hata deta hoon\n\n"
+            "Developer: BhaiKiMasti"
+        )
 
 async def remove_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # 'effective_message' use karne se update.message aur update.channel_post dono handle ho jate hain
-    msg = update.effective_message
-    
+    msg = update.channel_post or update.message
     if not msg:
         return
 
-    # Check if the message is forwarded
-    if msg.forward_date or msg.forward_from_chat or msg.forward_from:
+    # ✅ Forward check (channel compatible)
+    if msg.forward_origin:
         try:
-            # Copy bina tag ke
             await context.bot.copy_message(
                 chat_id=msg.chat_id,
                 from_chat_id=msg.chat_id,
                 message_id=msg.message_id
             )
-            # Purana delete
             await msg.delete()
+            logging.info("Forward removed successfully")
+
         except Exception as e:
-            logging.error(f"Error logic: {e}")
+            logging.error(f"Delete/Copy error: {e}")
 
 if __name__ == "__main__":
     if not BOT_TOKEN:
-        print("❌ Token missing in Railway Variables!")
-    else:
-        # 'allowed_updates' har tarah ki activity pakadne ke liye zaroori hai
-        app = ApplicationBuilder().token(BOT_TOKEN).build()
-        
-        app.add_handler(CommandHandler("start", start))
-        
-        # filters.FORWARDED saare forwarded messages ko filter karega
-        app.add_handler(MessageHandler(filters.FORWARDED & ~filters.COMMAND, remove_forward))
+        print("❌ BOT_TOKEN missing!")
+        exit()
 
-        print("🤖 Bot is starting... Noob mode off!")
-        app.run_polling(allowed_updates=Update.ALL_TYPES)
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+
+    # 🔥 VERY IMPORTANT
+    app.add_handler(MessageHandler(filters.ALL, remove_forward))
+
+    print("🚀 Bot running...")
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    
